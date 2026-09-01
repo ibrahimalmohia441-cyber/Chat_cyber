@@ -134,7 +134,7 @@ function goBack() {
     
     // إعادة العنوان الرئيسي وإخفاء اسم المستخدم وقائمة الثلاث نقاط
     headerTitle.style.display = 'block';
-    headerTitle.innerText = 'عقد الشبكة المسجلة';
+    headerTitle.innerText = '☠️الكتيبه 4☠️';
     headerUsername.style.display = 'none';
     
     backBtn.style.display = 'none';
