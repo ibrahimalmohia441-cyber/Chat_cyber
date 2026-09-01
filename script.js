@@ -18,6 +18,7 @@ const screens = {
 const title = document.getElementById('header-title');
 const backBtn = document.getElementById('back-btn');
 const settingsBtn = document.getElementById('settings-btn');
+const clearChatBtn = document.getElementById('clear-chat-btn');
 
 if ("Notification" in window && Notification.permission !== "granted") {
     try { Notification.requestPermission(); } catch(e) {}
@@ -29,6 +30,13 @@ window.onload = function() {
         joinApp();
     }
 };
+
+// طلب تحديث القائمة الصامت كل 3 ثوانٍ
+setInterval(() => {
+    if (myName) {
+        socket.emit('request update');
+    }
+}, 3000);
 
 function joinApp() {
     const inputName = document.getElementById('username-input').value.trim();
@@ -58,9 +66,10 @@ function openSettings() {
 
 socket.on('update users', (users) => {
     const ul = document.getElementById('users-list');
-    ul.innerHTML = ''; 
-
+    const currentScroll = ul.scrollTop;
+    let tempHTML = '';
     let count = 0;
+    
     for (let targetDeviceId in users) {
         if (targetDeviceId !== myDeviceId) {
             count++;
@@ -70,22 +79,24 @@ socket.on('update users', (users) => {
                 ? '<span style="color: #00ff66;">🟢 متصل الآن</span>' 
                 : '<span style="color: #94a3b8;">⚪ غير متصل</span>';
 
-            let li = document.createElement('li');
-            li.className = 'user-item';
-            li.innerHTML = `
-                <div class="user-avatar" style="${user.status === 'offline' ? 'border-color:#94a3b8; color:#94a3b8;' : ''}">${initial}</div>
-                <div class="user-info" style="flex:1;">
-                    <div class="user-name" style="${user.status === 'offline' ? 'color:#94a3b8;' : ''}">${user.username}</div>
-                    <div class="user-status">${statusIndicator}</div>
-                </div>
+            tempHTML += `
+                <li class="user-item" onclick="openChat('${targetDeviceId}', '${user.username}')">
+                    <div class="user-avatar" style="${user.status === 'offline' ? 'border-color:#94a3b8; color:#94a3b8;' : ''}">${initial}</div>
+                    <div class="user-info" style="flex:1;">
+                        <div class="user-name" style="${user.status === 'offline' ? 'color:#94a3b8;' : ''}">${user.username}</div>
+                        <div class="user-status">${statusIndicator}</div>
+                    </div>
+                </li>
             `;
-            li.onclick = () => openChat(targetDeviceId, user.username);
-            ul.appendChild(li);
         }
     }
+    
     if(count === 0) {
-        ul.innerHTML = '<div class="empty-msg">لا يوجد مستخدمين آخرين في قاعدة البيانات...</div>';
+        tempHTML = '<div class="empty-msg">لا يوجد مستخدمين آخرين في قاعدة البيانات...</div>';
     }
+    
+    ul.innerHTML = tempHTML;
+    ul.scrollTop = currentScroll;
 });
 
 function openChat(deviceId, name) {
@@ -93,17 +104,40 @@ function openChat(deviceId, name) {
     screens.users.style.display = 'none';
     screens.chat.style.display = 'flex';
     title.innerText = `CHANNEL: ${name}`;
+    
     backBtn.style.display = 'block';
     settingsBtn.style.display = 'none';
     
     document.getElementById('messages').innerHTML = '';
     document.getElementById('typing-indicator').innerText = '';
     
-    // طلب سجل المحادثة من الخادم
     socket.emit('fetch history', deviceId);
 }
 
-// استقبال وعرض سجل المحادثة
+function goBack() {
+    screens.chat.style.display = 'none';
+    screens.users.style.display = 'flex';
+    title.innerText = 'عقد الشبكة المسجلة';
+    
+    backBtn.style.display = 'none';
+    settingsBtn.style.display = 'block';
+    currentChatUser = { deviceId: '', name: '' };
+}
+
+function clearCurrentChat() {
+    if (currentChatUser.deviceId) {
+        if (confirm("هل أنت متأكد من رغبتك في مسح جميع رسائل هذه المحادثة للطرفين؟")) {
+            socket.emit('clear chat', currentChatUser.deviceId);
+        }
+    }
+}
+
+socket.on('chat cleared', (targetId) => {
+    if (currentChatUser.deviceId === targetId) {
+        document.getElementById('messages').innerHTML = '<div style="text-align:center; color:#ff4444; margin-top:20px; font-size:0.9rem;">تم مسح المحادثة بشكل آمن 🗑️</div>';
+    }
+});
+
 socket.on('chat history', (history) => {
     document.getElementById('messages').innerHTML = '';
     history.forEach(msg => {
@@ -118,15 +152,6 @@ socket.on('chat history', (history) => {
         }
     });
 });
-
-function goBack() {
-    screens.chat.style.display = 'none';
-    screens.users.style.display = 'flex';
-    title.innerText = 'عقد الشبكة المسجلة';
-    backBtn.style.display = 'none';
-    settingsBtn.style.display = 'block';
-    currentChatUser = { deviceId: '', name: '' };
-}
 
 function playNotificationSound() {
     try {
@@ -166,15 +191,11 @@ if (msgInput) {
 }
 
 socket.on('typing', (data) => {
-    if (currentChatUser.name === data.senderName) {
-        document.getElementById('typing-indicator').innerText = 'جاري الكتابة... ✍️';
-    }
+    if (currentChatUser.name === data.senderName) document.getElementById('typing-indicator').innerText = 'جاري الكتابة... ✍️';
 });
 
 socket.on('stop typing', (data) => {
-    if (currentChatUser.name === data.senderName) {
-        document.getElementById('typing-indicator').innerText = '';
-    }
+    if (currentChatUser.name === data.senderName) document.getElementById('typing-indicator').innerText = '';
 });
 
 document.getElementById('chat-form').addEventListener('submit', function(e) {
@@ -194,13 +215,7 @@ function sendFile(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const fileData = e.target.result;
-        socket.emit('file message', {
-            receiverDeviceId: currentChatUser.deviceId,
-            senderName: myName,
-            fileData: fileData,
-            fileName: file.name,
-            fileType: file.type
-        });
+        socket.emit('file message', { receiverDeviceId: currentChatUser.deviceId, senderName: myName, fileData, fileName: file.name, fileType: file.type });
         appendFileMessage('أنت', file.name, fileData, 'msg-me');
     };
     reader.readAsDataURL(file);
