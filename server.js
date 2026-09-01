@@ -5,9 +5,7 @@ const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    maxHttpBufferSize: 10 * 1024 * 1024
-});
+const io = new Server(server, { maxHttpBufferSize: 10 * 1024 * 1024 });
 
 app.use(express.static(__dirname));
 
@@ -16,24 +14,24 @@ const TELEGRAM_CHAT_ID = 'ضع_الآيدي_الخاص_بك_هنا';
 
 function sendTelegramAlert(username) {
     if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.includes('ضع_توكين')) return;
-    const message = `🚨 تنبيه أمني: ${username} سجل الدخول للمنصة!`;
+    const message = `🚨 تنبيه أمني: ${username} متصل بالمنصة!`;
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`;
     https.get(url, (res) => {}).on('error', (err) => {});
 }
 
-// سجل المستخدمين الدائم (يحفظ الاسم، حالة الاتصال، والآيدي الحالي)
-let registeredUsers = {};
+// سجل المستخدمين يعتمد الآن على معرف الجهاز (deviceId)
+let registeredUsers = {}; 
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/index.html');
-});
+app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
 io.on('connection', (socket) => {
     
-    // عند تسجيل الدخول
-    socket.on('join', (username) => {
-        // تحديث أو إضافة المستخدم كـ "متصل"
-        registeredUsers[username] = {
+    // عند تسجيل الدخول باستخدام معرف الجهاز
+    socket.on('join', ({ deviceId, username }) => {
+        socket.deviceId = deviceId; // حفظ المعرف في الجلسة الحالية
+        
+        registeredUsers[deviceId] = {
+            username: username,
             socketId: socket.id,
             status: 'online'
         };
@@ -42,52 +40,46 @@ io.on('connection', (socket) => {
         io.emit('update users', registeredUsers);
     });
 
-    // إرسال رسالة نصية باستخدام اسم المستلم بدلاً من الآيدي
-    socket.on('private message', ({ receiverName, senderName, message }) => {
-        const receiver = registeredUsers[receiverName];
-        if (receiver && receiver.status === 'online') {
-            socket.to(receiver.socketId).emit('private message', {
-                senderName: senderName,
-                message: message
-            });
+    // عند تغيير الاسم من الإعدادات
+    socket.on('update name', ({ deviceId, newName }) => {
+        if (registeredUsers[deviceId]) {
+            registeredUsers[deviceId].username = newName;
+            io.emit('update users', registeredUsers);
         }
     });
 
-    // إرسال ملف باستخدام اسم المستلم
-    socket.on('file message', ({ receiverName, senderName, fileData, fileName, fileType }) => {
-        const receiver = registeredUsers[receiverName];
+    socket.on('private message', ({ receiverDeviceId, senderName, message }) => {
+        const receiver = registeredUsers[receiverDeviceId];
         if (receiver && receiver.status === 'online') {
-            socket.to(receiver.socketId).emit('file message', {
-                senderName: senderName,
-                fileData: fileData,
-                fileName: fileName,
-                fileType: fileType
-            });
+            socket.to(receiver.socketId).emit('private message', { senderName, message });
         }
     });
 
-    socket.on('typing', ({ receiverName, senderName }) => {
-        const receiver = registeredUsers[receiverName];
+    socket.on('file message', ({ receiverDeviceId, senderName, fileData, fileName, fileType }) => {
+        const receiver = registeredUsers[receiverDeviceId];
         if (receiver && receiver.status === 'online') {
-            socket.to(receiver.socketId).emit('typing', { senderName: senderName });
+            socket.to(receiver.socketId).emit('file message', { senderName, fileData, fileName, fileType });
         }
     });
 
-    socket.on('stop typing', ({ receiverName, senderName }) => {
-        const receiver = registeredUsers[receiverName];
+    socket.on('typing', ({ receiverDeviceId, senderName }) => {
+        const receiver = registeredUsers[receiverDeviceId];
         if (receiver && receiver.status === 'online') {
-            socket.to(receiver.socketId).emit('stop typing', { senderName: senderName });
+            socket.to(receiver.socketId).emit('typing', { senderName });
         }
     });
 
-    // عند الانقطاع أو الخروج (تغيير الحالة إلى "غير متصل")
+    socket.on('stop typing', ({ receiverDeviceId, senderName }) => {
+        const receiver = registeredUsers[receiverDeviceId];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('stop typing', { senderName });
+        }
+    });
+
     socket.on('disconnect', () => {
-        for (const username in registeredUsers) {
-            if (registeredUsers[username].socketId === socket.id) {
-                registeredUsers[username].status = 'offline';
-                io.emit('update users', registeredUsers);
-                break;
-            }
+        if (socket.deviceId && registeredUsers[socket.deviceId]) {
+            registeredUsers[socket.deviceId].status = 'offline';
+            io.emit('update users', registeredUsers);
         }
     });
 });
