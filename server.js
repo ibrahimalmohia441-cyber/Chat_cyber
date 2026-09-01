@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
-const https = require('https'); // لإرسال طلبات تليجرام
+const https = require('https');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,23 +11,15 @@ const io = new Server(server, {
 
 app.use(express.static(__dirname));
 
-// ===== إعدادات بوت تليجرام =====
-const TELEGRAM_BOT_TOKEN ='8918778873:AAFz5F_lVYacFyfNO3iwJPQMO-LxOV-xgOM';
-const TELEGRAM_CHAT_ID = '1244133291';
+const TELEGRAM_BOT_TOKEN = 'ضع_توكين_البوت_هنا';
+const TELEGRAM_CHAT_ID = 'ضع_الآيدي_الخاص_بك_هنا';
 
 function sendTelegramAlert(username) {
-    if (TELEGRAM_BOT_TOKEN.includes('ضع_توكين')) return; // للتنبيه فقط إذا لم تضف البيانات بعد
-    
+    if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.includes('ضع_توكين')) return;
     const message = `🚨 تنبيه أمني: عقدة جديدة انضمت للمنصة!\n👤 اسم المستخدم: ${username}`;
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`;
-
-    https.get(url, (res) => {
-        // تم الإرسال بنجاح
-    }).on('error', (err) => {
-        console.error('خطأ في إرسال تنبيه تليجرام:', err.message);
-    });
+    https.get(url, (res) => {}).on('error', (err) => {});
 }
-// ===============================
 
 let activeUsers = {};
 
@@ -39,10 +31,7 @@ io.on('connection', (socket) => {
     
     socket.on('join', (username) => {
         activeUsers[socket.id] = username;
-        
-        // إرسال تنبيه لتليجرام عند تسجيل الدخول
         sendTelegramAlert(username);
-
         io.emit('update users', activeUsers);
     });
 
@@ -50,8 +39,7 @@ io.on('connection', (socket) => {
         socket.to(receiverId).emit('private message', {
             senderId: socket.id,
             senderName: activeUsers[socket.id],
-            message: message,
-            type: 'text'
+            message: message
         });
     });
 
@@ -65,14 +53,23 @@ io.on('connection', (socket) => {
         });
     });
 
+    socket.on('typing', ({ receiverId }) => {
+        socket.to(receiverId).emit('typing', { senderId: socket.id });
+    });
+
+    socket.on('stop typing', ({ receiverId }) => {
+        socket.to(receiverId).emit('stop typing', { senderId: socket.id });
+    });
+
     socket.on('disconnect', () => {
-        if(activeUsers[socket.id]){
+        if (activeUsers[socket.id]) {
             delete activeUsers[socket.id];
             io.emit('update users', activeUsers);
         }
     });
 });
 
-server.listen(3000, () => {
-    console.log('الخادم يعمل الآن على الرابط: http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`الخادم يعمل بنجاح على المنفذ: ${PORT}`);
 });
