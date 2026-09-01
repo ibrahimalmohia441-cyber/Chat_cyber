@@ -20,24 +20,11 @@ function sendTelegramAlert(username) {
 }
 
 let registeredUsers = {}; 
-let chatHistory = {}; // سجل المحادثات المؤقت
+let chatHistory = {};
 
-// دالة لتوليد معرّف موحد للمحادثة بين أي جهازين
 function getConvId(id1, id2) {
     return [id1, id2].sort().join('_');
 }
-
-// مؤقت يعمل كل دقيقة لحذف الرسائل التي مر عليها ساعة (3600000 ملي ثانية)
-setInterval(() => {
-    const oneHourAgo = Date.now() - (60 * 60 * 1000);
-    for (let convId in chatHistory) {
-        chatHistory[convId] = chatHistory[convId].filter(msg => msg.timestamp > oneHourAgo);
-        // إذا أصبحت المحادثة فارغة، احذفها لتوفير الذاكرة
-        if (chatHistory[convId].length === 0) {
-            delete chatHistory[convId];
-        }
-    }
-}, 60 * 1000);
 
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
@@ -57,7 +44,29 @@ io.on('connection', (socket) => {
         }
     });
 
-    // جلب سجل المحادثة عند فتح الدردشة
+    // استقبال طلب التحديث كل 3 ثواني لإرسال القائمة المحدثة
+    socket.on('request update', () => {
+        socket.emit('update users', registeredUsers);
+    });
+
+    // دالة مسح الدردشة يدوياً
+    socket.on('clear chat', (targetDeviceId) => {
+        if (!socket.deviceId) return;
+        const convId = getConvId(socket.deviceId, targetDeviceId);
+        
+        if (chatHistory[convId]) {
+            delete chatHistory[convId]; // حذف السجل من الخادم
+        }
+
+        // إعلام الطرفين لتفريغ الشاشة
+        socket.emit('chat cleared', targetDeviceId);
+        
+        const receiver = registeredUsers[targetDeviceId];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('chat cleared', socket.deviceId);
+        }
+    });
+
     socket.on('fetch history', (targetDeviceId) => {
         if (!socket.deviceId) return;
         const convId = getConvId(socket.deviceId, targetDeviceId);
@@ -70,15 +79,7 @@ io.on('connection', (socket) => {
         const convId = getConvId(senderDeviceId, receiverDeviceId);
         
         if (!chatHistory[convId]) chatHistory[convId] = [];
-        
-        // حفظ الرسالة في السجل
-        chatHistory[convId].push({
-            type: 'text',
-            senderDeviceId: senderDeviceId,
-            senderName: senderName,
-            message: message,
-            timestamp: Date.now()
-        });
+        chatHistory[convId].push({ type: 'text', senderDeviceId, senderName, message, timestamp: Date.now() });
 
         const receiver = registeredUsers[receiverDeviceId];
         if (receiver && receiver.status === 'online') {
@@ -91,16 +92,7 @@ io.on('connection', (socket) => {
         const convId = getConvId(senderDeviceId, receiverDeviceId);
         
         if (!chatHistory[convId]) chatHistory[convId] = [];
-        
-        // حفظ الملف في السجل
-        chatHistory[convId].push({
-            type: 'file',
-            senderDeviceId: senderDeviceId,
-            senderName: senderName,
-            fileData: fileData,
-            fileName: fileName,
-            timestamp: Date.now()
-        });
+        chatHistory[convId].push({ type: 'file', senderDeviceId, senderName, fileData, fileName, timestamp: Date.now() });
 
         const receiver = registeredUsers[receiverDeviceId];
         if (receiver && receiver.status === 'online') {
@@ -127,6 +119,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`الخادم يعمل بنجاح على المنفذ: ${PORT}`);
-});
+server.listen(PORT, () => { console.log(`الخادم يعمل بنجاح على المنفذ: ${PORT}`); });
