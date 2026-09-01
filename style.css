@@ -1,311 +1,327 @@
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
-    font-family: 'Courier New', Courier, monospace; /* خط ذو طابع برمجي تقني */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-body, html { 
-    height: 100%; 
-    width: 100%; 
-    overflow: hidden; 
-    background-color: #0b0f19; 
-}
-
-/* الحاوية الرئيسية */
-.app-container { 
-    width: 100%; 
-    height: 100%; 
-    display: flex; 
-    flex-direction: column; 
-    background: linear-gradient(rgba(11, 15, 25, 0.92), rgba(11, 15, 25, 0.92)), 
-                url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1000&auto=format&fit=crop') center/cover;
-    position: relative; 
-}
-
-/* الترويسة السيبرانية */
-.header { 
-    background: #0f172a; 
-    color: #00ff66; /* أخضر نيون */
-    padding: 15px 20px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    border-bottom: 2px solid #00ff66; 
-    box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
-    z-index: 10; 
-    min-height: 65px;
-}
-
-.header h2 { 
-    font-size: 1.1rem; 
-    font-weight: bold; 
-    letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
-}
-
-.back-btn { 
-    position: absolute; 
-    right: 15px; 
-    background: none; 
-    border: none; 
-    color: #00ff66; 
-    font-size: 1.5rem; 
-    cursor: pointer; 
-    display: none; 
-}
-
-.screen { 
-    display: none; 
-    flex: 1; 
-    flex-direction: column; 
-    width: 100%; 
-    height: 100%; 
-    overflow: hidden; 
-}
-
-/* شاشة تسجيل الدخول السيبرانية */
-#login-screen { 
-    justify-content: center; 
-    align-items: center; 
-    display: flex; 
-}
-
-.login-card { 
-    background: rgba(15, 23, 42, 0.85); 
-    border: 1px solid #1e293b;
-    border-top: 4px solid #00ff66;
-    padding: 40px 30px; 
-    border-radius: 8px; 
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); 
-    width: 90%; 
-    max-width: 400px; 
-    text-align: center; 
-    backdrop-filter: blur(10px);
-}
-
-.cyber-badge {
-    background: rgba(0, 255, 102, 0.1);
-    color: #00ff66;
-    display: inline-block;
-    padding: 4px 10px;
-    font-size: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    border: 1px solid rgba(0, 255, 102, 0.3);
-}
-
-.login-card h3 { 
-    color: #f8fafc; 
-    margin-bottom: 25px; 
-    font-size: 1.2rem; 
-}
-
-.login-card input { 
-    width: 100%; 
-    padding: 14px; 
-    margin-bottom: 20px; 
-    border: 1px solid #334155; 
-    border-radius: 6px; 
-    font-size: 1rem; 
-    outline: none; 
-    background: #020617; 
-    color: #38bdf8;
-}
-
-.login-card input:focus { 
-    border-color: #00ff66; 
-    box-shadow: 0 0 10px rgba(0, 255, 102, 0.2); 
-}
-
-.login-card button { 
-    width: 100%; 
-    padding: 14px; 
-    background: #00ff66; 
-    color: #020617; 
-    border: none; 
-    border-radius: 6px; 
-    font-size: 1rem; 
-    cursor: pointer; 
-    font-weight: bold; 
-    transition: 0.3s; 
-}
-
-.login-card button:hover { 
-    background: #00cc52; 
-    box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
-}
-
-/* قائمة المستخدمين (العقد المتصلة) */
-#users-screen { 
-    overflow-y: auto; 
-}
-
-.users-list { 
-    list-style: none; 
-    padding: 15px; 
-}
-
-.user-item { 
-    display: flex; 
-    align-items: center; 
-    padding: 12px 15px; 
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid #1e293b;
-    margin-bottom: 10px;
-    border-radius: 6px; 
-    cursor: pointer; 
-    transition: 0.2s; 
-}
-
-.user-item:hover { 
-    border-color: #00ff66; 
-    background: rgba(15, 23, 42, 0.9);
-}
-
-.user-avatar { 
-    width: 42px; 
-    height: 42px; 
-    border-radius: 50%; 
-    background: #020617; 
-    border: 1px solid #00ff66;
-    color: #00ff66; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    font-size: 1.1rem; 
-    font-weight: bold; 
-    margin-left: 15px; 
-}
-
-.user-name { 
-    font-size: 1rem; 
-    font-weight: bold; 
-    color: #f8fafc; 
-}
-
-.user-status { 
-    font-size: 0.75rem; 
-    color: #00ff66; 
-}
-
-.empty-msg { 
-    text-align: center; 
-    color: #94a3b8; 
-    margin-top: 50px; 
-    font-size: 0.95rem; 
-}
-
-/* غرفة الدردشة */
-#chat-screen { 
-    position: relative; 
-}
-
-.messages-container { 
-    flex: 1; 
-    overflow-y: auto; 
-    padding: 15px; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 12px; 
-    z-index: 1; 
-}
-
-.message-bubble { 
-    padding: 10px 14px; 
-    border-radius: 6px; 
-    max-width: 80%; 
-    font-size: 0.95rem; 
-    line-height: 1.4; 
-    word-wrap: break-word; 
-    border: 1px solid rgba(255,255,255,0.1);
-}
-
-.msg-me { 
-    background: rgba(0, 255, 102, 0.15); 
+body {
+    background-color: #0f172a;
     color: #f8fafc;
-    border-color: rgba(0, 255, 102, 0.3);
-    align-self: flex-end; 
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.msg-other { 
-    background: rgba(15, 23, 42, 0.85); 
+/* الهيدر العلوي */
+header {
+    background-color: #1e293b;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    height: 60px;
+    z-index: 100;
+}
+
+.chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#header-title {
+    font-size: 1.1rem;
     color: #38bdf8;
-    border-color: #334155;
-    align-self: flex-start; 
 }
 
-.msg-sender { 
-    font-size: 0.7rem; 
-    color: #94a3b8; 
-    margin-bottom: 4px; 
-    display: block; 
+#header-username {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #fff;
+    display: none;
 }
 
-/* تنسيق ملفات الوسائط والملفات المرفقة ضمن الدردشة */
-.file-attachment {
-    display: block;
-    background: rgba(2, 6, 23, 0.6);
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px dashed #00ff66;
-    color: #00ff66;
-    text-decoration: none;
-    font-size: 0.85rem;
-    margin-top: 5px;
-    word-break: break-all;
-}
-
-.file-attachment:hover {
-    background: rgba(0, 255, 102, 0.1);
-}
-
-/* منطقة إدخال الرسائل والأزرار */
-.input-area { 
-    display: flex; 
-    padding: 10px 15px; 
-    background: #0f172a; 
-    border-top: 1px solid #1e293b;
-    align-items: center; 
-    z-index: 1; 
-}
-
-.file-btn {
-    background: none;
+#back-btn, #settings-btn, #menu-dots-btn {
+    background: transparent;
     border: none;
-    font-size: 1.4rem;
+    color: #fff;
+    font-size: 1.3rem;
     cursor: pointer;
-    margin-left: 10px;
-    filter: drop-shadow(0 0 3px rgba(0,255,102,0.4));
+    padding: 5px;
+    transition: opacity 0.2s;
 }
 
-.input-area input[type="text"] { 
-    flex: 1; 
-    padding: 12px 16px; 
-    border: 1px solid #334155; 
-    border-radius: 6px; 
-    outline: none; 
-    margin-left: 10px; 
-    font-size: 0.95rem; 
-    background: #020617; 
-    color: #f8fafc; 
+#back-btn:hover, #settings-btn:hover, #menu-dots-btn:hover {
+    opacity: 0.8;
 }
 
-.send-btn { 
-    background: #00ff66; 
-    color: #020617; 
-    border: none; 
-    width: 42px; 
-    height: 42px; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-size: 1.1rem; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
+/* القائمة المنسدلة للثلاث نقاط */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    left: 0; /* تفتح من جهة اليمين/اليسار حسب الاتجاه */
+    right: auto;
+    top: 40px;
+    background-color: #1e293b;
+    min-width: 180px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.4);
+    border-radius: 8px;
+    z-index: 200;
+    border: 1px solid #334155;
+    overflow: hidden;
+}
+
+.dropdown-content a {
+    color: #ff4444;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.dropdown-content a:hover {
+    background-color: #334155;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+/* الشاشات العامة */
+.screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* شاشة تسجيل الدخول */
+#login-screen {
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+}
+
+.login-card {
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    text-align: center;
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid #334155;
+}
+
+.login-card h2 {
+    margin-bottom: 10px;
+    color: #38bdf8;
+}
+
+.login-card p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.login-card input, .login-card button {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    border: 1px solid #475569;
+    background: #0f172a;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.login-card button {
+    background: #0284c7;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.login-card button:hover {
+    background: #0369a1;
+}
+
+/* شاشة قائمة المستخدمين */
+.users-container {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.users-container h3 {
+    margin-bottom: 15px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+#users-list {
+    list-style: none;
+}
+
+.user-item {
+    background: #1e293b;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border: 1px solid #334155;
+    transition: transform 0.1s, background 0.2s;
+}
+
+.user-item:hover {
+    background: #334155;
+    transform: translateY(-2px);
+}
+
+.user-avatar {
+    width: 45px;
+    height: 45px;
+    background: #0284c7;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-left: 15px;
+}
+
+.user-name {
+    font-weight: bold;
+    font-size: 1.05rem;
+    color: #f8fafc;
+}
+
+.user-status {
+    font-size: 0.8rem;
+    margin-top: 3px;
+}
+
+.empty-msg {
+    text-align: center;
+    color: #64748b;
+    margin-top: 40px;
+}
+
+/* شاشة المحادثة */
+.messages-container {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #0b0f19;
+}
+
+.message-bubble {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.msg-me {
+    background-color: #0369a1;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+
+.msg-other {
+    background-color: #1e293b;
+    color: #f8fafc;
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+    border: 1px solid #334155;
+}
+
+.msg-sender {
+    display: block;
+    font-size: 0.75rem;
+    color: #38bdf8;
+    margin-bottom: 3px;
     font-weight: bold;
 }
 
-.send-btn:hover { 
-    background: #00cc52; 
+.file-attachment {
+    color: #38bdf8;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.typing-indicator {
+    padding: 0 15px;
+    height: 20px;
+    font-size: 0.8rem;
+    color: #38bdf8;
+}
+
+/* حقل الكتابة وإرسال الرسائل */
+.chat-input-area {
+    padding: 10px 15px;
+    background-color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #334155;
+}
+
+.file-btn {
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.file-btn:hover {
+    transform: scale(1.1);
+}
+
+#msg-input {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 20px;
+    border: 1px solid #475569;
+    background: #0f172a;
+    color: #fff;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+#send-btn {
+    background: #0284c7;
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+#send-btn:hover {
+    background: #0369a1;
 }
