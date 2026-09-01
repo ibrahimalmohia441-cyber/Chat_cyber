@@ -16,12 +16,13 @@ const TELEGRAM_CHAT_ID = 'ضع_الآيدي_الخاص_بك_هنا';
 
 function sendTelegramAlert(username) {
     if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.includes('ضع_توكين')) return;
-    const message = `🚨 تنبيه أمني: عقدة جديدة انضمت للمنصة!\n👤 اسم المستخدم: ${username}`;
+    const message = `🚨 تنبيه أمني: ${username} سجل الدخول للمنصة!`;
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(message)}`;
     https.get(url, (res) => {}).on('error', (err) => {});
 }
 
-let activeUsers = {};
+// سجل المستخدمين الدائم (يحفظ الاسم، حالة الاتصال، والآيدي الحالي)
+let registeredUsers = {};
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -29,42 +30,64 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     
+    // عند تسجيل الدخول
     socket.on('join', (username) => {
-        activeUsers[socket.id] = username;
+        // تحديث أو إضافة المستخدم كـ "متصل"
+        registeredUsers[username] = {
+            socketId: socket.id,
+            status: 'online'
+        };
+        
         sendTelegramAlert(username);
-        io.emit('update users', activeUsers);
+        io.emit('update users', registeredUsers);
     });
 
-    socket.on('private message', ({ receiverId, message }) => {
-        socket.to(receiverId).emit('private message', {
-            senderId: socket.id,
-            senderName: activeUsers[socket.id],
-            message: message
-        });
+    // إرسال رسالة نصية باستخدام اسم المستلم بدلاً من الآيدي
+    socket.on('private message', ({ receiverName, senderName, message }) => {
+        const receiver = registeredUsers[receiverName];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('private message', {
+                senderName: senderName,
+                message: message
+            });
+        }
     });
 
-    socket.on('file message', ({ receiverId, fileData, fileName, fileType }) => {
-        socket.to(receiverId).emit('file message', {
-            senderId: socket.id,
-            senderName: activeUsers[socket.id],
-            fileData: fileData,
-            fileName: fileName,
-            fileType: fileType
-        });
+    // إرسال ملف باستخدام اسم المستلم
+    socket.on('file message', ({ receiverName, senderName, fileData, fileName, fileType }) => {
+        const receiver = registeredUsers[receiverName];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('file message', {
+                senderName: senderName,
+                fileData: fileData,
+                fileName: fileName,
+                fileType: fileType
+            });
+        }
     });
 
-    socket.on('typing', ({ receiverId }) => {
-        socket.to(receiverId).emit('typing', { senderId: socket.id });
+    socket.on('typing', ({ receiverName, senderName }) => {
+        const receiver = registeredUsers[receiverName];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('typing', { senderName: senderName });
+        }
     });
 
-    socket.on('stop typing', ({ receiverId }) => {
-        socket.to(receiverId).emit('stop typing', { senderId: socket.id });
+    socket.on('stop typing', ({ receiverName, senderName }) => {
+        const receiver = registeredUsers[receiverName];
+        if (receiver && receiver.status === 'online') {
+            socket.to(receiver.socketId).emit('stop typing', { senderName: senderName });
+        }
     });
 
+    // عند الانقطاع أو الخروج (تغيير الحالة إلى "غير متصل")
     socket.on('disconnect', () => {
-        if (activeUsers[socket.id]) {
-            delete activeUsers[socket.id];
-            io.emit('update users', activeUsers);
+        for (const username in registeredUsers) {
+            if (registeredUsers[username].socketId === socket.id) {
+                registeredUsers[username].status = 'offline';
+                io.emit('update users', registeredUsers);
+                break;
+            }
         }
     });
 });
