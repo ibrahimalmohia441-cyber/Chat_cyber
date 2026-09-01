@@ -1,6 +1,5 @@
 const socket = io();
 
-// توليد معرف جهاز فريد أو استدعائه إذا كان موجوداً
 let myDeviceId = localStorage.getItem('cyber_chat_device_id');
 if (!myDeviceId) {
     myDeviceId = 'DEV_' + Math.random().toString(36).substr(2, 9);
@@ -18,7 +17,7 @@ const screens = {
 };
 const title = document.getElementById('header-title');
 const backBtn = document.getElementById('back-btn');
-const settingsBtn = document.getElementById('settings-btn'); // الزر الجديد
+const settingsBtn = document.getElementById('settings-btn');
 
 if ("Notification" in window && Notification.permission !== "granted") {
     try { Notification.requestPermission(); } catch(e) {}
@@ -36,8 +35,6 @@ function joinApp() {
     if (inputName) {
         myName = inputName;
         localStorage.setItem('cyber_chat_username', myName);
-        
-        // إرسال معرف الجهاز مع الاسم
         socket.emit('join', { deviceId: myDeviceId, username: myName });
         
         screens.login.style.display = 'none';
@@ -49,7 +46,6 @@ function joinApp() {
     }
 }
 
-// دالة الإعدادات لتعديل الاسم
 function openSettings() {
     const newName = prompt("⚙️ الإعدادات\n\nأدخل اسم المستخدم الجديد:", myName);
     if (newName && newName.trim() !== "" && newName.trim() !== myName) {
@@ -66,12 +62,10 @@ socket.on('update users', (users) => {
 
     let count = 0;
     for (let targetDeviceId in users) {
-        // تخطي جهازك الخاص لكي لا يظهر في القائمة
         if (targetDeviceId !== myDeviceId) {
             count++;
             const user = users[targetDeviceId];
             const initial = user.username.charAt(0).toUpperCase();
-            
             const statusIndicator = user.status === 'online' 
                 ? '<span style="color: #00ff66;">🟢 متصل الآن</span>' 
                 : '<span style="color: #94a3b8;">⚪ غير متصل</span>';
@@ -85,12 +79,10 @@ socket.on('update users', (users) => {
                     <div class="user-status">${statusIndicator}</div>
                 </div>
             `;
-            // استخدام معرف الجهاز عند فتح المحادثة
             li.onclick = () => openChat(targetDeviceId, user.username);
             ul.appendChild(li);
         }
     }
-
     if(count === 0) {
         ul.innerHTML = '<div class="empty-msg">لا يوجد مستخدمين آخرين في قاعدة البيانات...</div>';
     }
@@ -103,9 +95,29 @@ function openChat(deviceId, name) {
     title.innerText = `CHANNEL: ${name}`;
     backBtn.style.display = 'block';
     settingsBtn.style.display = 'none';
+    
     document.getElementById('messages').innerHTML = '';
     document.getElementById('typing-indicator').innerText = '';
+    
+    // طلب سجل المحادثة من الخادم
+    socket.emit('fetch history', deviceId);
 }
+
+// استقبال وعرض سجل المحادثة
+socket.on('chat history', (history) => {
+    document.getElementById('messages').innerHTML = '';
+    history.forEach(msg => {
+        const isMe = msg.senderDeviceId === myDeviceId;
+        const className = isMe ? 'msg-me' : 'msg-other';
+        const senderNameDisplay = isMe ? 'أنت' : msg.senderName;
+        
+        if (msg.type === 'text') {
+            appendTextMessage(senderNameDisplay, msg.message, className);
+        } else if (msg.type === 'file') {
+            appendFileMessage(senderNameDisplay, msg.fileName, msg.fileData, className);
+        }
+    });
+});
 
 function goBack() {
     screens.chat.style.display = 'none';
@@ -146,7 +158,6 @@ if (msgInput) {
     msgInput.addEventListener('input', () => {
         if (!currentChatUser.deviceId) return;
         socket.emit('typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
-        
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
             socket.emit('stop typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
@@ -169,7 +180,6 @@ socket.on('stop typing', (data) => {
 document.getElementById('chat-form').addEventListener('submit', function(e) {
     e.preventDefault();
     const msg = msgInput.value.trim();
-    
     if (msg && currentChatUser.deviceId) {
         socket.emit('private message', { receiverDeviceId: currentChatUser.deviceId, senderName: myName, message: msg });
         socket.emit('stop typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
@@ -181,7 +191,6 @@ document.getElementById('chat-form').addEventListener('submit', function(e) {
 function sendFile(event) {
     const file = event.target.files[0];
     if (!file || !currentChatUser.deviceId) return;
-
     const reader = new FileReader();
     reader.onload = function(e) {
         const fileData = e.target.result;
@@ -200,7 +209,7 @@ function sendFile(event) {
 
 socket.on('private message', (data) => {
     try {
-        if (currentChatUser.name === data.senderName) {
+        if (currentChatUser.deviceId === data.senderDeviceId) {
             document.getElementById('typing-indicator').innerText = '';
             appendTextMessage(data.senderName, data.message, 'msg-other');
         } else {
@@ -213,7 +222,7 @@ socket.on('private message', (data) => {
 
 socket.on('file message', (data) => {
     try {
-        if (currentChatUser.name === data.senderName) {
+        if (currentChatUser.deviceId === data.senderDeviceId) {
             document.getElementById('typing-indicator').innerText = '';
             appendFileMessage(data.senderName, data.fileName, data.fileData, 'msg-other');
         } else {
@@ -228,7 +237,6 @@ function appendTextMessage(sender, text, className) {
     const messages = document.getElementById('messages');
     const div = document.createElement('div');
     div.className = `message-bubble ${className}`;
-    
     if(className === 'msg-other') {
         const senderSpan = document.createElement('span');
         senderSpan.className = 'msg-sender';
@@ -244,7 +252,6 @@ function appendFileMessage(sender, fileName, fileData, className) {
     const messages = document.getElementById('messages');
     const div = document.createElement('div');
     div.className = `message-bubble ${className}`;
-    
     if(className === 'msg-other') {
         const senderSpan = document.createElement('span');
         senderSpan.className = 'msg-sender';
