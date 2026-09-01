@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber Chat | منصة طلاب الأمن السيبراني</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <button class="back-btn" id="back-btn" onclick="goBack()">&#8594;</button>
+            <h2 id="header-title">CYBER // TERMINAL_LOGIN</h2>
+        </div>
+
+        <div id="login-screen" class="screen" style="display: flex;">
+            <div class="login-card">
+                <div class="cyber-badge">SECURE_NODE</div>
+                <h3>تسجيل الدخول للنظام</h3>
+                <input type="text" id="username-input" placeholder="أدخل اسم المستخدم أو الرمز..." autocomplete="off">
+                <button onclick="joinApp()">اتصال آمن [CONNECT]</button>
+            </div>
+        </div>
+
+        <div id="users-screen" class="screen">
+            <ul id="users-list" class="users-list">
+                </ul>
+        </div>
+
+        <div id="chat-screen" class="screen">
+            <div id="messages" class="messages-container"></div>
+            
+            <form id="chat-form" class="input-area">
+                <input type="file" id="file-input" style="display: none;" onchange="sendFile(event)">
+                <button type="button" class="file-btn" onclick="document.getElementById('file-input').click()" title="إرسال ملف">📎</button>
+                
+                <input id="msg-input" type="text" placeholder="اكتب أمر أو رسالة مشفرة..." autocomplete="off" />
+                <button type="submit" class="send-btn">⚡</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
