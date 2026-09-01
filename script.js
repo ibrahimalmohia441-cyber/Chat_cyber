@@ -15,10 +15,13 @@ const screens = {
     users: document.getElementById('users-screen'),
     chat: document.getElementById('chat-screen')
 };
-const title = document.getElementById('header-title');
+
+const headerTitle = document.getElementById('header-title');
+const headerUsername = document.getElementById('header-username');
 const backBtn = document.getElementById('back-btn');
 const settingsBtn = document.getElementById('settings-btn');
-const clearChatBtn = document.getElementById('clear-chat-btn');
+const chatMenuContainer = document.getElementById('chat-menu-container');
+const chatDropdownMenu = document.getElementById('chat-dropdown-menu');
 
 if ("Notification" in window && Notification.permission !== "granted") {
     try { Notification.requestPermission(); } catch(e) {}
@@ -47,8 +50,14 @@ function joinApp() {
         
         screens.login.style.display = 'none';
         screens.users.style.display = 'flex';
-        title.innerText = 'عقد الشبكة المسجلة';
+        
+        headerTitle.style.display = 'block';
+        headerTitle.innerText = 'عقد الشبكة المسجلة';
+        headerUsername.style.display = 'none';
+        
         settingsBtn.style.display = 'block';
+        backBtn.style.display = 'none';
+        chatMenuContainer.style.display = 'none';
     } else {
         alert('الرجاء إدخال اسم أو كود تعريفي!');
     }
@@ -103,10 +112,15 @@ function openChat(deviceId, name) {
     currentChatUser = { deviceId: deviceId, name: name };
     screens.users.style.display = 'none';
     screens.chat.style.display = 'flex';
-    title.innerText = `CHANNEL: ${name}`;
+    
+    // إخفاء العنوان الرئيسي وإظهار اسم المستخدم بجوار زر الرجوع
+    headerTitle.style.display = 'none';
+    headerUsername.style.display = 'block';
+    headerUsername.innerText = name;
     
     backBtn.style.display = 'block';
     settingsBtn.style.display = 'none';
+    chatMenuContainer.style.display = 'block'; // إظهار زر الثلاث نقاط
     
     document.getElementById('messages').innerHTML = '';
     document.getElementById('typing-indicator').innerText = '';
@@ -117,14 +131,34 @@ function openChat(deviceId, name) {
 function goBack() {
     screens.chat.style.display = 'none';
     screens.users.style.display = 'flex';
-    title.innerText = 'عقد الشبكة المسجلة';
+    
+    // إعادة العنوان الرئيسي وإخفاء اسم المستخدم وقائمة الثلاث نقاط
+    headerTitle.style.display = 'block';
+    headerTitle.innerText = 'عقد الشبكة المسجلة';
+    headerUsername.style.display = 'none';
     
     backBtn.style.display = 'none';
     settingsBtn.style.display = 'block';
+    chatMenuContainer.style.display = 'none';
+    chatDropdownMenu.classList.remove('show');
+    
     currentChatUser = { deviceId: '', name: '' };
 }
 
+// التحكم بقائمة الثلاث نقاط (إظهار/إخفاء)
+function toggleChatMenu() {
+    chatDropdownMenu.classList.toggle('show');
+}
+
+// إغلاق القائمة عند النقر في أي مكان خارجها
+window.addEventListener('click', function(e) {
+    if (!document.getElementById('menu-dots-btn').contains(e.target) && !chatDropdownMenu.contains(e.target)) {
+        chatDropdownMenu.classList.remove('show');
+    }
+});
+
 function clearCurrentChat() {
+    chatDropdownMenu.classList.remove('show');
     if (currentChatUser.deviceId) {
         if (confirm("هل أنت متأكد من رغبتك في مسح جميع رسائل هذه المحادثة للطرفين؟")) {
             socket.emit('clear chat', currentChatUser.deviceId);
