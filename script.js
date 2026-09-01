@@ -52,7 +52,7 @@ function joinApp() {
         screens.users.style.display = 'flex';
         
         headerTitle.style.display = 'block';
-        headerTitle.innerText = 'عقد الشبكة المسجلة';
+        headerTitle.innerText = '☠️الكتيبه 4☠️';
         headerUsername.style.display = 'none';
         
         settingsBtn.style.display = 'block';
