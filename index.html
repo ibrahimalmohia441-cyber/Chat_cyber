@@ -9,15 +9,12 @@
 <body>
 
     <div class="app-container">
-        <!-- الترويسة -->
         <div class="header">
             <button class="back-btn" id="back-btn" onclick="goBack()">&#8594;</button>
             <h2 id="header-title">CYBER // TERMINAL_LOGIN</h2>
-            <!-- زر تغيير الاسم / الخروج -->
             <button id="logout-btn" onclick="logout()" style="display: none; position: absolute; left: 15px; background: none; border: 1px solid #00ff66; color: #00ff66; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">إلغاء الاتصال</button>
         </div>
 
-        <!-- الشاشة 1: تسجيل الدخول -->
         <div id="login-screen" class="screen" style="display: flex;">
             <div class="login-card">
                 <div class="cyber-badge">SECURE_NODE</div>
@@ -27,15 +24,15 @@
             </div>
         </div>
 
-        <!-- الشاشة 2: قائمة المستخدمين -->
         <div id="users-screen" class="screen">
             <ul id="users-list" class="users-list"></ul>
         </div>
 
-        <!-- الشاشة 3: غرفة الدردشة -->
         <div id="chat-screen" class="screen">
             <div id="messages" class="messages-container"></div>
             
+            <div id="typing-indicator" style="padding: 0 15px; color: #00ff66; font-size: 0.75rem; height: 20px; font-style: italic;"></div>
+
             <form id="chat-form" class="input-area">
                 <input type="file" id="file-input" style="display: none;" onchange="sendFile(event)">
                 <button type="button" class="file-btn" onclick="document.getElementById('file-input').click()" title="إرسال ملف">📎</button>
