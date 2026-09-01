@@ -69,7 +69,7 @@ socket.on('update users', (users) => {
     }
 
     if(count === 0) {
-        ul.innerHTML = '<div class="empty-msg">لا توجد عقد أخرى متصلة بالنظام حالياً...</div>';
+        ul.innerHTML = '<div class="empty-msg">لا يوجد احد متصل بالنظام حالياً...</div>';
     }
 });
 
