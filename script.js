@@ -1,6 +1,14 @@
 const socket = io();
+
+// توليد معرف جهاز فريد أو استدعائه إذا كان موجوداً
+let myDeviceId = localStorage.getItem('cyber_chat_device_id');
+if (!myDeviceId) {
+    myDeviceId = 'DEV_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('cyber_chat_device_id', myDeviceId);
+}
+
 let myName = localStorage.getItem('cyber_chat_username') || '';
-let currentChatUser = { name: '' };
+let currentChatUser = { deviceId: '', name: '' };
 let typingTimeout = null;
 
 const screens = {
@@ -10,7 +18,7 @@ const screens = {
 };
 const title = document.getElementById('header-title');
 const backBtn = document.getElementById('back-btn');
-const logoutBtn = document.getElementById('logout-btn');
+const settingsBtn = document.getElementById('settings-btn'); // الزر الجديد
 
 if ("Notification" in window && Notification.permission !== "granted") {
     try { Notification.requestPermission(); } catch(e) {}
@@ -28,34 +36,42 @@ function joinApp() {
     if (inputName) {
         myName = inputName;
         localStorage.setItem('cyber_chat_username', myName);
-        socket.emit('join', myName);
+        
+        // إرسال معرف الجهاز مع الاسم
+        socket.emit('join', { deviceId: myDeviceId, username: myName });
+        
         screens.login.style.display = 'none';
         screens.users.style.display = 'flex';
         title.innerText = 'عقد الشبكة المسجلة';
-        logoutBtn.style.display = 'block';
+        settingsBtn.style.display = 'block';
     } else {
         alert('الرجاء إدخال اسم أو كود تعريفي!');
     }
 }
 
-function logout() {
-    localStorage.removeItem('cyber_chat_username');
-    location.reload();
+// دالة الإعدادات لتعديل الاسم
+function openSettings() {
+    const newName = prompt("⚙️ الإعدادات\n\nأدخل اسم المستخدم الجديد:", myName);
+    if (newName && newName.trim() !== "" && newName.trim() !== myName) {
+        myName = newName.trim();
+        localStorage.setItem('cyber_chat_username', myName);
+        socket.emit('update name', { deviceId: myDeviceId, newName: myName });
+        alert("تم تحديث اسمك بنجاح!");
+    }
 }
 
-// تحديث قائمة المستخدمين وحالتهم
 socket.on('update users', (users) => {
     const ul = document.getElementById('users-list');
     ul.innerHTML = ''; 
 
     let count = 0;
-    for (let userName in users) {
-        if (userName !== myName) {
+    for (let targetDeviceId in users) {
+        // تخطي جهازك الخاص لكي لا يظهر في القائمة
+        if (targetDeviceId !== myDeviceId) {
             count++;
-            const user = users[userName];
-            const initial = userName.charAt(0).toUpperCase();
+            const user = users[targetDeviceId];
+            const initial = user.username.charAt(0).toUpperCase();
             
-            // تحديد حالة الاتصال مع الألوان
             const statusIndicator = user.status === 'online' 
                 ? '<span style="color: #00ff66;">🟢 متصل الآن</span>' 
                 : '<span style="color: #94a3b8;">⚪ غير متصل</span>';
@@ -65,11 +81,12 @@ socket.on('update users', (users) => {
             li.innerHTML = `
                 <div class="user-avatar" style="${user.status === 'offline' ? 'border-color:#94a3b8; color:#94a3b8;' : ''}">${initial}</div>
                 <div class="user-info" style="flex:1;">
-                    <div class="user-name" style="${user.status === 'offline' ? 'color:#94a3b8;' : ''}">${userName}</div>
+                    <div class="user-name" style="${user.status === 'offline' ? 'color:#94a3b8;' : ''}">${user.username}</div>
                     <div class="user-status">${statusIndicator}</div>
                 </div>
             `;
-            li.onclick = () => openChat(userName);
+            // استخدام معرف الجهاز عند فتح المحادثة
+            li.onclick = () => openChat(targetDeviceId, user.username);
             ul.appendChild(li);
         }
     }
@@ -79,13 +96,13 @@ socket.on('update users', (users) => {
     }
 });
 
-function openChat(name) {
-    currentChatUser = { name: name };
+function openChat(deviceId, name) {
+    currentChatUser = { deviceId: deviceId, name: name };
     screens.users.style.display = 'none';
     screens.chat.style.display = 'flex';
     title.innerText = `CHANNEL: ${name}`;
     backBtn.style.display = 'block';
-    logoutBtn.style.display = 'none';
+    settingsBtn.style.display = 'none';
     document.getElementById('messages').innerHTML = '';
     document.getElementById('typing-indicator').innerText = '';
 }
@@ -95,8 +112,8 @@ function goBack() {
     screens.users.style.display = 'flex';
     title.innerText = 'عقد الشبكة المسجلة';
     backBtn.style.display = 'none';
-    logoutBtn.style.display = 'block';
-    currentChatUser = { name: '' };
+    settingsBtn.style.display = 'block';
+    currentChatUser = { deviceId: '', name: '' };
 }
 
 function playNotificationSound() {
@@ -127,12 +144,12 @@ function showBrowserNotification(titleText, bodyText) {
 const msgInput = document.getElementById('msg-input');
 if (msgInput) {
     msgInput.addEventListener('input', () => {
-        if (!currentChatUser.name) return;
-        socket.emit('typing', { receiverName: currentChatUser.name, senderName: myName });
+        if (!currentChatUser.deviceId) return;
+        socket.emit('typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
         
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
-            socket.emit('stop typing', { receiverName: currentChatUser.name, senderName: myName });
+            socket.emit('stop typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
         }, 1500);
     });
 }
@@ -153,9 +170,9 @@ document.getElementById('chat-form').addEventListener('submit', function(e) {
     e.preventDefault();
     const msg = msgInput.value.trim();
     
-    if (msg && currentChatUser.name) {
-        socket.emit('private message', { receiverName: currentChatUser.name, senderName: myName, message: msg });
-        socket.emit('stop typing', { receiverName: currentChatUser.name, senderName: myName });
+    if (msg && currentChatUser.deviceId) {
+        socket.emit('private message', { receiverDeviceId: currentChatUser.deviceId, senderName: myName, message: msg });
+        socket.emit('stop typing', { receiverDeviceId: currentChatUser.deviceId, senderName: myName });
         appendTextMessage('أنت', msg, 'msg-me');
         msgInput.value = '';
     }
@@ -163,13 +180,13 @@ document.getElementById('chat-form').addEventListener('submit', function(e) {
 
 function sendFile(event) {
     const file = event.target.files[0];
-    if (!file || !currentChatUser.name) return;
+    if (!file || !currentChatUser.deviceId) return;
 
     const reader = new FileReader();
     reader.onload = function(e) {
         const fileData = e.target.result;
         socket.emit('file message', {
-            receiverName: currentChatUser.name,
+            receiverDeviceId: currentChatUser.deviceId,
             senderName: myName,
             fileData: fileData,
             fileName: file.name,
@@ -187,14 +204,11 @@ socket.on('private message', (data) => {
             document.getElementById('typing-indicator').innerText = '';
             appendTextMessage(data.senderName, data.message, 'msg-other');
         } else {
-            // تحديث نافذة التنبيه لتتضمن نص الرسالة
             alert(`🚨 تنبيه أمني: رسالة جديدة من [ ${data.senderName} ]\n\n💬 محتوى الرسالة:\n"${data.message}"`);
         }
         playNotificationSound();
         showBrowserNotification(`رسالة من ${data.senderName}`, data.message);
-    } catch(err) {
-        console.error(err);
-    }
+    } catch(err) { console.error(err); }
 });
 
 socket.on('file message', (data) => {
@@ -207,9 +221,7 @@ socket.on('file message', (data) => {
         }
         playNotificationSound();
         showBrowserNotification(`ملف من ${data.senderName}`, data.fileName);
-    } catch(err) {
-        console.error(err);
-    }
+    } catch(err) { console.error(err); }
 });
 
 function appendTextMessage(sender, text, className) {
